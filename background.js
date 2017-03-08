@@ -53,10 +53,10 @@ function resetTab() {
 
 function setInsecureTab() {
     tabStatuses[currentTabId] = INSECURE;
-    setCurrentTabTitleAndIcon("Security of channel is in doubt", "icons/Security-Caution-icon.png");
+    setCurrentTabTitleAndIcon("Unsafe resource(s) have been blocked for your safety", "icons/Security-Caution-icon.png");
 }
 
 function setSecureTab() {
     tabStatuses[currentTabId] = SECURE;
-    setCurrentTabTitleAndIcon("Channel is secure", "icons/Security-Approved-icon.png");
+    setCurrentTabTitleAndIcon("Channel is confidential and authenticated", "icons/Security-Approved-icon.png");
 }
