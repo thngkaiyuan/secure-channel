@@ -1,0 +1,25 @@
+{
+  "manifest_version": 2,
+
+  "name": "Secure Channel",
+  "description": "This extension creates a secure channel between your browser and enrolled origin servers",
+  "version": "1.0",
+
+  "browser_action": {
+    "default_icon": "icons/Security-icon.png"
+  },
+
+  "permissions": [
+    "tabs",
+    "webRequest",
+    "webRequestBlocking",
+    "webNavigation",
+    "<all_urls>"
+  ],
+
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  }
+}
