@@ -29,8 +29,8 @@ To help you gain deep understanding of how the *Secure Channel* protocol works, 
 #### 1.1.5. A new request header is generated
 
 1. A new request header preserving the original request method (POST) and HTTP version (1.1) is generated with an empty path. For example, an original request header with the status line `POST /login.php HTTP/1.1` would have its path stripped and replaced with a status line reading only `POST / HTTP/1.1` to protect the confidentiality of parameters in the request path.
-2. The original "host" header is added to the new request.
-3. An "x-secure-header" header is added to the new request with the value `k=base64_encode(Enc_Key); c=base64_encode(Enc_Hdr)`.
+2. The original `host` header is added to the new request.
+3. An `x-secure-header` header is added to the new request with the value `k=base64_encode(Enc_Key); c=base64_encode(Enc_Hdr)`.
 
 #### 1.1.6 Final request header
 
@@ -106,6 +106,37 @@ By this point of time, we have verified the integrity of the request. The symmet
 <br />
 
 ## 3. Protecting the Response (Middleware)
+
+### 3.1. Check if the request was made using the Secure Channel protocol
+
+1. The middleware checks if a symmetric key was bound to the request. If such a key does not exist, then the response if returned as it is.
+
+### 3.2. Initialize a new response and an AEAD cipher
+
+1. Otherwise, the middleware creates a new response with the same status code.
+2. It also initializes an Authenticated Encryption with Associated Data (AEAD) cipher (implemented using AES-128-CBC & HMAC-SHA256) with the symmetric key.
+3. The first 128 bits of the key K (K1) is used as the HMAC_SHA256 key and the last 128 bits of the key K (K2) is used as the AES_128_CBC key.
+
+### 3.3. Encrypt and encode the response header
+
+1. The entire response header is encrypted using the AEAD cipher to produce `Enc_Hdr = IV || AES_128_CBC(response_header, K2) || HMAC_SHA256(status_code || AES_128_CBC(response_header, K1) || length(status_code), K1)`.
+2. `Enc_Hdr` is then encoded in Base64 and added to the new response header with a key-value of `x-secure-header: base64_encode(Enc_Hdr)`.
+
+### 3.4. Encrypt and encode the response body
+
+1. Also, the entire response body is encrypted using the AEAD cipher to produce `Enc_Body = IV || AES_128_CBC(response_body, K2) || HMAC_SHA256("body" || AES_128_CBC(response_body, K1) || length("body"), K1)`.
+2. `Enc_Body` is then encoded in Base64 and added to the new response header with a key-value of `x-secure-body: base64_encode(Enc_Body)`.
+
+### 3.5. Final response
+
+Finally, a protected response would look like the following:
+```
+HTTP/1.1 200 OK
+x-secure-header: base64_encode(Enc_Hdr)
+x-secure-body: base64_encode(Enc_Body)
+```
+Using the strong encryption within AEAD, we have ensured the **confidentiality** of data in the response. The **integrity** of the response is also protected by the HMAC within the ciphertexts. Lastly, the **authenticity of the response sender** is ensured since only one with possession of the private key will be able to obtain the correct symmetric key (aside from the request originator) to produce the correct HMAC. Also, by using the symmetric key K received in the request to protect the response, we ensure that only the request originator (i.e. the client) will be able to decrypt the response. This ensures the **authenticity of the response receiver**.   
+<br />
 
 ## 4. Receiving the Response (Browser)
 
