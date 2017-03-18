@@ -119,12 +119,12 @@ By this point of time, we have verified the integrity of the request. The symmet
 
 ### 3.3. Encrypt and encode the response header
 
-1. The entire response header is encrypted using the AEAD cipher to produce `Enc_Hdr = IV || AES_128_CBC(response_header, K2) || HMAC_SHA256(status_code || AES_128_CBC(response_header, K1) || length(status_code), K1)`.
+1. The entire response header is encrypted using the AEAD cipher to produce `Enc_Hdr = IV || AES_128_CBC(response_header, K2) || HMAC_SHA256(status_code || AES_128_CBC(response_header, K2) || length(status_code), K1)`.
 2. `Enc_Hdr` is then encoded in Base64 and added to the new response header with a key-value of `x-secure-header: base64_encode(Enc_Hdr)`.
 
 ### 3.4. Encrypt and encode the response body
 
-1. Also, the entire response body is encrypted using the AEAD cipher to produce `Enc_Body = IV || AES_128_CBC(response_body, K2) || HMAC_SHA256("body" || AES_128_CBC(response_body, K1) || length("body"), K1)`.
+1. Also, the entire response body is encrypted using the AEAD cipher to produce `Enc_Body = IV || AES_128_CBC(response_body, K2) || HMAC_SHA256("body" || AES_128_CBC(response_body, K2) || length("body"), K1)`.
 2. `Enc_Body` is then encoded in Base64 and added to the new response header with a key-value of `x-secure-body: base64_encode(Enc_Body)`.
 
 ### 3.5. Final response
@@ -138,7 +138,33 @@ x-secure-body: base64_encode(Enc_Body)
 Using the strong encryption within AEAD, we have ensured the **confidentiality** of data in the response. The **integrity** of the response is also protected by the HMAC within the ciphertexts. Lastly, the **authenticity of the response sender** is ensured since only one with possession of the private key will be able to obtain the correct symmetric key (aside from the request originator) to produce the correct HMAC. Also, by using the symmetric key K received in the request to protect the response, we ensure that only the request originator (i.e. the client) will be able to decrypt the response. This ensures the **authenticity of the response receiver**.   
 <br />
 
-## 4. Receiving the Response (Browser)
+## 4. Processing the Response (Browser)
+
+### 4.1. Check if the response should be parsed using the Secure Channel protocol
+
+1. If a "secured request" was made by the browser, the transaction will be expecting a "secured response" from the server. Every "secured response" will contain the header `x-authentication-results` set by the browser. If this header was set in the original response, it will be overwritten to prevent spoofing of authentication results.
+2. Based on the previously generated symmetric key K, the two sub-keys K1 and K2 are generated where K1 is the first 128 bits of K and K2 is the last 128 bits of K.
+
+### 4.2. Processing the response header
+
+1. The header value of `x-secure-header` is extracted to obtain `base64_encode(Enc_Hdr)`.
+2. The encoded value is then decoded to obtain `Enc_Hdr = IV || AES_128_CBC(response_header, K2) || HMAC_SHA256(status_code || AES_128_CBC(response_header, K2) || length(status_code), K1)`.
+3. A HMAC of the received status code, ciphertext and length of received status code is computed and matched against the received digest to ensure the **integrity** and **authenticity** of the received response header. Verification of the associated data (status code) is necessary to ensure that the response header was not swapped with the response body.
+4. Using K2, the ciphertext is then decrypted to obtain the original response header. This decrypted and authenticated response header is then used to overwrite the original "secured" response header (the authentication results header is preserved).
+5. If all verifications steps had been successful, the authentication results for the header will be a "pass". Otherwise, it will be a "fail".
+
+### 4.3. Processing the response body
+
+1. Similarly, the header value of `x-secure-body` is extracted to obtain `base64_encode(Enc_Body)`.
+2. The encoded value is then decoded to obtain `Enc_Body = IV || AES_128_CBC(response_body, K2) || HMAC_SHA256("body" || AES_128_CBC(response_body, K2) || length("body"), K1)`.
+3. A HMAC of the string "body", the received ciphertext and the length of the associated data is computed and matched against the received digest to ensure the **integrity** and **authenticity** of the received response body. Verification of the associated data ("body") is necessary to ensure that the response body was not swapped with the response header.
+4. Using K2, the ciphertext is then decrypted to obtain the original response body. This decrypted and authenticated response body is then used to overwrite the original "secured" response body (if any).
+5. If all verification steps had been successful, the authentication results for the body will be a "pass". Otherwise, it will be a "fail".
+
+### 4.4. Writing of authentication results
+
+By this point of time, we would have verified the **integrity** and **authenticity** of the entire response. These authentication results are then written in the `x-authentication-results` response header and later parsed by the browser extension.   
+<br />
 
 ## 5. Processing the Authentication Results (Browser Extension)
 
