@@ -146,7 +146,9 @@ Using the strong encryption within AEAD, we have ensured the **confidentiality**
 
 1. On receiving headers, the *Secure Channel* browser extension checks for the presence of the `x-authentication-results` header set by the browser. If this header is non-existent, then the response is returned as normal.
 2. Otherwise, we check both the results of the response header and body authentication. If either of the results are not "pass" (e.g. none/fail), then the resource is deemed "insecure" and blocked. The extension's icon would also turn amber if any of the resources on the page have been blocked (indicating the lack of message integrity/authenticity).
+    ![image](https://cloud.githubusercontent.com/assets/10496851/23801924/b4b23b0a-05ec-11e7-85c5-5342646a3015.png)
 3. If both checks are "pass", then the resource is deemed "secure" and allowed to be rendered. If all resources on the page are "secure", then a green shield will be presented as the extension's icon as an indication that all 3 security properties (confidentiality, integrity and authenticity) had been met.
+    ![image](https://cloud.githubusercontent.com/assets/10496851/23801645/db71b7ee-05eb-11e7-9f59-50de91658526.png)
 
 # Summary
 
