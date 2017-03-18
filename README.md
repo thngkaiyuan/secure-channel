@@ -1,6 +1,6 @@
 # About Secure Channel
 
-*Secure Channel* is an application-layer protocol designed to ensure the security of communications between origin servers and clients going through reverse proxy nodes of a Content Distribution Network (CDN). The relevance of such a secure channel was underscored by the recent [CloudBleed incident](https://blog.cloudflare.com/quantifying-the-impact-of-cloudbleed/).
+*Secure Channel* is an application-layer protocol designed to ensure the security of communications between origin servers and clients going through reverse proxy nodes of a Content Distribution Network (CDN). The relevance of such a secure channel is underscored by the recent [CloudBleed incident](https://blog.cloudflare.com/quantifying-the-impact-of-cloudbleed/) in which sensitive data (e.g. cookies, personally identifiable information) was compromised due to vulnerable CDN nodes. *Secure Channel*'s application-layer encryption would have prevented an attacker from exploiting any leaked data.
 
 The *Secure Channel* setup comprises three main components:
 - A public key server
