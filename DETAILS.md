@@ -2,7 +2,7 @@
 
 To help you gain deep understanding of how the *Secure Channel* protocol works, we will bring you through the life cycle of a POST request made to https://untampered.info.
 
-## 1. Protecting the Request
+## 1. Protecting the Request (Browser)
 
 ### 1.1. Protecting the request header
 
@@ -71,9 +71,45 @@ x-secure-header: k=base64_encode(Enc_Key); c=base64_encode(Enc_Hdr)
 c=url_safe_base_64_encode(Enc_Body)
 ```
 
-## 2. Protecting the Response
+Notice that the **confidentiality** of all sensitive data (e.g. path, cookies, body) are now protected by strong encryption. The symmetric key that is encrypted with the origin server's public key ensures the **authenticity** of the recipient by making sure that only one with the private key (e.g. the origin server and not a CDN node) will be able to decrypt the contents of the request. The cryptographic hash digests included in the ciphertexts also help to ensure the **integrity** of the received request as we will see later.   
+<br />
 
-## 3. Receiving & Reacting to the Response
+## 2. Receiving the Request (Middleware)
+
+### 2.1. Check if the request is made using the Secure Channel protocol
+
+1. On receiving a request, the middleware checks if the request header `x-secure-header` exists. If it does not, the middleware treats this request as unprotected and simply passes on the request. Otherwise, it continues to parse the protected request.
+
+### 2.2. Decoding and decrypting the symmetric key
+
+1. The encoded value `base64_encode(Enc_Key)` is extracted from the header and decoded to obtain `Enc_Key`.
+2. `Enc_Key` is decrypted using the server's private key to obtain K, the session's symmetric key.
+
+### 2.3. Decoding and decrypting the request header
+
+1. Likewise, the encoded value `base64_encode(Enc_Hdr)` is extracted from the header and decoded to obtain `Enc_Hdr = IV || AES_256_CBC(1 || SHA256(request_header) || request_header, K)`.
+2. Using the IV and the symmetric key K, we decrypt the ciphertext to obtain the plaintext `1 || SHA256(request_header) || request_header`.
+3. The first character of the plaintext is verified to be `1` to ensure that the request header is not maliciously swapped with the request body.
+4. The hash of the received `request_header` is then computed and matched against the received hash digest to ensure the **integrity** of the received request header.
+5. Then, by checking the `content-length` of the request header, we know if there is content in the request body. This prevents an attacker from subtly removing the request body.
+
+### 2.4. Decoding and decrypting the request body
+
+1. The encoded value `url_safe_base_64_encode(Enc_Body)` is extracted from the request body and decoded to obtain `Enc_Body = IV || AES_256_CBC(2 || SHA256(request_body) || request_body, K)`.
+2. Using the IV and the symmetric key K, we decrypt the ciphertext to obtain the plaintext `2 || SHA256(request_body) || request_body`.
+3. Again, the first character of the plaintext is verified to be `2` to ensure that the request body is not maliciously swapped with the request header.
+4. The hash of the received `request_body` is then computed and matched against the received hash digest to ensure the **integrity** of the received request body.
+
+### 2.5. Returning the decoded and decrypted request
+
+By this point of time, we have verified the integrity of the request. The symmetric key K is then bound to the request and the decoded & decrypted request is passed on to the web application.   
+<br />
+
+## 3. Protecting the Response (Middleware)
+
+## 4. Receiving the Response (Browser)
+
+## 5. Reacting to the Response (Browser Extension)
 
 # Summary
 
